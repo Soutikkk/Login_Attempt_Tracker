@@ -1,100 +1,164 @@
+```python
 import datetime
 
-# Predefined username and password stored inside the code
+# =========================
+# Configuration
+# =========================
+
 CORRECT_USERNAME = "admin"
 CORRECT_PASSWORD = "password123"
+MAX_FAILED_ATTEMPTS = 3
+LOG_FILE = "login_log.txt"
+
+
+# =========================
+# Logging Function
+# =========================
 
 def log_attempt(username, status):
-    """
-    Saves the login attempt details to a text file called 'login_log.txt'.
-    Includes the current date and time.
-    """
-    # Get the current date and time formatted nicely
+    """Save a login attempt with the current date and time."""
+
     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # Format the log line
-    log_line = f"[{current_time}] Username: '{username}' | Status: {status}\n"
-    
+
+    log_entry = (
+        f"[{current_time}] "
+        f"Username: '{username}' | "
+        f"Status: {status}\n"
+    )
+
     try:
-        # Open the file in 'append' mode ('a') so we don't overwrite previous attempts
-        with open("login_log.txt", "a") as log_file:
-            log_file.write(log_line)
-    except IOError as e:
-        print(f"Warning: Could not save log entry. Error: {e}")
+        with open(LOG_FILE, "a", encoding="utf-8") as file:
+            file.write(log_entry)
 
-def display_report(total, success, failed, is_locked):
-    """
-    Displays the summary report at the end of the program execution.
-    """
-    print("\n" + "=" * 40)
-    print("           LOGIN ATTEMPT REPORT          ")
-    print("=" * 40)
+    except OSError as error:
+        print(f"Warning: Unable to write to log file. {error}")
+
+
+# =========================
+# Report Function
+# =========================
+
+def display_report(total, successful, failed, locked):
+    """Display the login attempt summary."""
+
+    print("\n" + "=" * 45)
+    print("          LOGIN ATTEMPT REPORT")
+    print("=" * 45)
+
     print(f"Total Login Attempts:       {total}")
-    print(f"Successful Login Attempts:  {success}")
+    print(f"Successful Login Attempts:  {successful}")
     print(f"Failed Login Attempts:      {failed}")
-    
-    # Determine the status representation
-    if is_locked:
-        status = "LOCKED (Security Lockout)"
-    else:
-        status = "ACTIVE / open"
-        
-    print(f"Current Account Status:     {status}")
-    print("=" * 40 + "\n")
 
-def main():
-    # Tracking variables initialized to 0
+    account_status = (
+        "LOCKED (Security Lockout)"
+        if locked
+        else "ACTIVE / OPEN"
+    )
+
+    print(f"Current Account Status:     {account_status}")
+    print("=" * 45)
+
+
+# =========================
+# Login Function
+# =========================
+
+def login():
+    """
+    Handle the login process.
+
+    Returns:
+        tuple: total attempts, successful attempts,
+               failed attempts, account lock status
+    """
+
     total_attempts = 0
     successful_attempts = 0
     failed_attempts = 0
-    consecutive_failed_attempts = 0  # Tracks consecutive fails to handle lockout
-    
+    consecutive_failures = 0
     account_locked = False
 
-    print("=== Welcome to the Login Attempt Tracker ===")
-    print("Instructions: Enter credentials. Enter 'exit' as username to quit.\n")
+    print("\n=== Welcome to the Login Attempt Tracker ===")
+    print("Enter 'exit' as the username to quit.\n")
 
-    # The loop runs as long as the account is not locked
     while not account_locked:
-        # Prompt user for their username
-        username_input = input("Enter username: ").strip()
-        
-        # Check if the user wants to exit early
-        if username_input.lower() == "exit":
-            print("Exiting the application...")
-            break
-            
-        # Prompt user for their password
-        password_input = input("Enter password: ")
 
-        # Increment total attempts
+        username = input("Enter username: ").strip()
+
+        # Allow the user to exit
+        if username.lower() == "exit":
+            print("\nExiting the application...")
+            break
+
+        password = input("Enter password: ")
+
         total_attempts += 1
 
-        # Check if the credentials match the predefined username and password
-        if username_input == CORRECT_USERNAME and password_input == CORRECT_PASSWORD:
-            print("Access Granted! Login Successful.\n")
+        # Check credentials
+        if username == CORRECT_USERNAME and password == CORRECT_PASSWORD:
+
             successful_attempts += 1
-            consecutive_failed_attempts = 0  # Reset consecutive failures upon successful login
-            
-            # Log the successful attempt
-            log_attempt(username_input, "SUCCESS")
+            consecutive_failures = 0
+
+            print("\nAccess Granted! Login Successful.\n")
+
+            log_attempt(username, "SUCCESS")
+
         else:
-            print("Access Denied! Incorrect username or password.\n")
+
             failed_attempts += 1
-            consecutive_failed_attempts += 1
-            
-            # Log the failed attempt
-            log_attempt(username_input, "FAILED")
+            consecutive_failures += 1
 
-            # Lock account after 3 consecutive failed attempts
-            if consecutive_failed_attempts >= 3:
+            print("\nAccess Denied! Incorrect username or password.")
+
+            remaining_attempts = MAX_FAILED_ATTEMPTS - consecutive_failures
+
+            if remaining_attempts > 0:
+                print(
+                    f"Warning: {remaining_attempts} "
+                    f"attempt(s) remaining before lockout.\n"
+                )
+
+            log_attempt(username, "FAILED")
+
+            # Lock account after maximum failures
+            if consecutive_failures >= MAX_FAILED_ATTEMPTS:
                 account_locked = True
-                print("Account locked due to too many failed attempts.")
-                break
+                print("\nAccount locked due to too many failed attempts.")
 
-    # Once the loop terminates, display the summary report
-    display_report(total_attempts, successful_attempts, failed_attempts, account_locked)
+    return (
+        total_attempts,
+        successful_attempts,
+        failed_attempts,
+        account_locked
+    )
 
-# Run the program
+
+# =========================
+# Main Program
+# =========================
+
+def main():
+
+    (
+        total,
+        successful,
+        failed,
+        locked
+    ) = login()
+
+    display_report(
+        total,
+        successful,
+        failed,
+        locked
+    )
+
+
+# =========================
+# Program Entry Point
+# =========================
+
 if __name__ == "__main__":
     main()
+```
